@@ -9,8 +9,8 @@
   "integration_type": "hub",
   "iot_class": "local_polling",
   "requirements": [
-    "pysnmp==7.1.22"
+    "pysnmp==7.1.27"
   ],
-  "version": "0.1.0",
-  "single_config_entry": false
+  "single_config_entry": false,
+  "version": "0.1.0"
 }
