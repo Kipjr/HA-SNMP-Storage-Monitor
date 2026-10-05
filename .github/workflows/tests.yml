@@ -24,8 +24,8 @@ jobs:
       - name: Link the integration into the test config
         run: |
           site="$(python -c 'import pytest_homeassistant_custom_component as p, os; print(os.path.dirname(p.__file__))')"
-          ln -sfn "$PWD/custom_components/traefik" \
-            "$site/testing_config/custom_components/traefik"
+          ln -sfn "$PWD/custom_components/ha-snmp-storage-monitor" \
+            "$site/testing_config/custom_components/ha-snmp-storage-monitor"
 
       - name: Run tests
-        run: pytest -q --cov=custom_components.traefik --cov-report=term-missing
+        run: pytest -q --cov=custom_components.ha-snmp-storage-monitor --cov-report=term-missing
