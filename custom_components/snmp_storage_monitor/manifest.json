@@ -1,0 +1,16 @@
+{
+  "domain": "snmp_storage_monitor",
+  "name": "SNMP Storage Monitor",
+  "codeowners": [
+    "@Kipjr"
+  ],
+  "config_flow": true,
+  "documentation": "https://github.com/kipjr/ha-snmp-storage-monitor",
+  "integration_type": "hub",
+  "iot_class": "local_polling",
+  "requirements": [
+    "pysnmp>=7.1.27"
+  ],
+  "single_config_entry": false,
+  "version": "0.1.0"
+}
