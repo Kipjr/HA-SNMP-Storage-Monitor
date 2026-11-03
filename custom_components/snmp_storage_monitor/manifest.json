@@ -1,6 +1,9 @@
 {
   "domain": "snmp_storage_monitor",
   "name": "SNMP Storage Monitor",
+  "categories": [
+    "computers_network.monitoring"
+  ],
   "codeowners": [
     "@Kipjr"
   ],
@@ -8,9 +11,10 @@
   "documentation": "https://github.com/kipjr/ha-snmp-storage-monitor",
   "integration_type": "hub",
   "iot_class": "local_polling",
+  "issue_tracker": "https://github.com/Kipjr/HA-SNMP-Storage-Monitor/issues",
   "requirements": [
     "pysnmp>=7.1.27"
   ],
   "single_config_entry": false,
-  "version": "0.1.0"
+  "version": "0.2.0"
 }
