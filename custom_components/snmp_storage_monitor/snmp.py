@@ -1,186 +1,178 @@
-"""SNMP client for storage monitoring."""
-
+"""Asynchronous SNMP v2c client."""
 from __future__ import annotations
-
 from dataclasses import dataclass
+import asyncio
+import logging
 from typing import Any
 
 from pysnmp.hlapi.v1arch.asyncio import (
-    CommunityData,
-    ContextData,
-    SnmpEngine,
-    UdpTransportTarget,
-    bulk_cmd,
-    get_cmd,
+    CommunityData, ContextData, SnmpEngine, UdpTransportTarget, bulk_cmd, get_cmd
 )
 from pysnmp.proto.rfc1902 import ObjectName
 from pysnmp.proto.rfc1905 import Null
 
 from .const import (
-    DISK_ALLOCATION_UNIT_OID,
-    DISK_DESCR_OID,
-    DISK_SIZE_OID,
-    DISK_USED_OID,
-    MEM_SIZE_OID,
-    MEM_USED_OID,
+    HR_STORAGE_DESCR_OID, HR_STORAGE_FIXED_DISK, HR_STORAGE_RAM,
+    HR_STORAGE_SIZE_OID, HR_STORAGE_TYPE_OID, HR_STORAGE_UNIT_OID,
+    HR_STORAGE_USED_OID, SYS_DESCR_OID,
 )
-from .exceptions import SnmpError
+from .exceptions import SnmpConnectionError, SnmpMonitorError, SnmpResponseError
+
+_LOGGER = logging.getLogger(__name__)
 
 
-@dataclass
+@dataclass(frozen=True, slots=True)
 class StorageEntry:
-    """SNMP storage table entry."""
-
+    """One hrStorageTable row."""
     index: str
+    key: str
     name: str
+    storage_type: str
     allocation_unit: int
     size: int
     used: int
 
+    @property
+    def size_bytes(self) -> int:
+        return self.allocation_unit * self.size
+
+    @property
+    def used_bytes(self) -> int:
+        return self.allocation_unit * self.used
+
 
 class SnmpClient:
-    """Asynchronous SNMP client."""
+    """SNMP v2c client. Numeric OIDs avoid runtime MIB loading."""
 
-    def __init__(
-        self,
-        host: str,
-        port: int,
-        community: str,
-    ) -> None:
+    def __init__(self, host: str, port: int, community: str) -> None:
         self.host = host
         self.port = port
-        self.community = community
         self.engine = SnmpEngine()
+        self.auth = CommunityData(community, mpModel=1)
 
-    async def _transport(self) -> UdpTransportTarget:
-        """Create the UDP transport target."""
-        return await UdpTransportTarget.create(
-            (self.host, self.port),
-            timeout=5,
-            retries=1,
-        )
-
-    @staticmethod
-    def _raw_oid(oid: str) -> ObjectName:
-        """Convert a numeric OID to an SNMP ObjectName."""
-        return ObjectName(oid)
+    async def _target(self) -> UdpTransportTarget:
+        try:
+            return await UdpTransportTarget.create(
+                (self.host, self.port), timeout=5, retries=1
+            )
+        except Exception as err:
+            raise SnmpConnectionError(str(err)) from err
 
     async def _get(self, oid: str) -> Any:
-        """Read one OID without loading MIB files."""
-        transport = await self._transport()
-
-        error_indication, error_status, error_index, var_binds = await get_cmd(
-            self.engine,
-            CommunityData(self.community, mpModel=1),
-            transport,
-            ContextData(),
-            (self._raw_oid(oid), Null("")),
-            lookupMib=False,
-        )
-
-        if error_indication:
-            raise SnmpError(str(error_indication))
-
-        if error_status:
-            raise SnmpError(
-                f"{error_status.prettyPrint()} at index {error_index}"
+        try:
+            indication, status, index, values = await get_cmd(
+                self.engine, self.auth, await self._target(), ContextData(),
+                (ObjectName(oid), Null("")), lookupMib=False
             )
-
-        if not var_binds:
-            raise SnmpError(f"No response for OID {oid}")
-
-        return var_binds[0][1]
+        except SnmpMonitorError:
+            raise
+        except Exception as err:
+            raise SnmpConnectionError(f"SNMP GET {oid}: {err}") from err
+        if indication:
+            raise SnmpConnectionError(str(indication))
+        if status:
+            raise SnmpResponseError(
+                f"{status.prettyPrint()} at varbind index {index}"
+            )
+        if not values:
+            raise SnmpResponseError(f"No value returned for OID {oid}")
+        return values[0][1]
 
     async def _walk(self, base_oid: str) -> dict[str, Any]:
-        """Walk an OID subtree without loading MIB files."""
-        transport = await self._transport()
+        result: dict[str, Any] = {}
+        try:
+            async for indication, status, index, varbinds in bulk_cmd(
+                self.engine, self.auth, await self._target(), ContextData(),
+                0, 25, (ObjectName(base_oid), Null("")),
+                lookupMib=False, lexicographicMode=False
+            ):
+                if indication:
+                    raise SnmpConnectionError(str(indication))
+                if status:
+                    raise SnmpResponseError(
+                        f"{status.prettyPrint()} at varbind index {index}"
+                    )
+                for oid, value in varbinds:
+                    text_oid = oid.prettyPrint()
+                    prefix = base_oid + "."
+                    if text_oid.startswith(prefix):
+                        result[text_oid[len(prefix):]] = value
+        except (SnmpConnectionError, SnmpResponseError):
+            raise
+        except Exception as err:
+            raise SnmpConnectionError(f"SNMP WALK {base_oid}: {err}") from err
+        return result
 
-        results: dict[str, Any] = {}
+    @staticmethod
+    def _text(value: Any) -> str:
+        return value.prettyPrint().strip()
 
-        async for (
-            error_indication,
-            error_status,
-            error_index,
-            var_binds,
-        ) in bulk_cmd(
-            self.engine,
-            CommunityData(self.community, mpModel=1),
-            transport,
-            ContextData(),
-            0,
-            25,
-            (self._raw_oid(base_oid), Null("")),
-            lookupMib=False,
-            lexicographicMode=False,
-        ):
-            if error_indication:
-                raise SnmpError(str(error_indication))
-
-            if error_status:
-                raise SnmpError(
-                    f"{error_status.prettyPrint()} at index {error_index}"
-                )
-
-            for oid, value in var_binds:
-                oid_string = oid.prettyPrint()
-
-                if not oid_string.startswith(f"{base_oid}."):
-                    continue
-
-                index = oid_string[len(base_oid) + 1:]
-                results[index] = value
-
-        return results
+    @staticmethod
+    def _int(value: Any, label: str) -> int:
+        try:
+            number = int(value)
+        except (TypeError, ValueError) as err:
+            raise SnmpResponseError(f"Invalid {label}: {value!r}") from err
+        if number < 0:
+            raise SnmpResponseError(f"Negative {label}: {number}")
+        return number
 
     async def async_test_connection(self) -> None:
-        """Test the SNMP connection."""
-        await self._get(MEM_SIZE_OID)
+        """Test SNMP without relying on a particular storage index."""
+        await self._get(SYS_DESCR_OID)
 
-    async def async_get_memory(self) -> dict[str, float]:
-        """Read memory values."""
-        size_raw = await self._get(MEM_SIZE_OID)
-        used_raw = await self._get(MEM_USED_OID)
+    async def async_get_storage_table(self) -> list[StorageEntry]:
+        """Join the five hrStorageTable columns by SNMP index."""
+        columns = await asyncio.gather(
+            self._walk(HR_STORAGE_TYPE_OID),
+            self._walk(HR_STORAGE_DESCR_OID),
+            self._walk(HR_STORAGE_UNIT_OID),
+            self._walk(HR_STORAGE_SIZE_OID),
+            self._walk(HR_STORAGE_USED_OID),
+        )
+        types, names, units, sizes, used = columns
+        rows: list[StorageEntry] = []
+        for index, value in names.items():
+            if any(index not in col for col in (types, units, sizes, used)):
+                continue
+            name = self._text(value)
+            unit = self._int(units[index], f"allocation unit {index}")
+            size = self._int(sizes[index], f"size {index}")
+            used_value = self._int(used[index], f"used {index}")
+            if not name or unit <= 0 or size <= 0:
+                continue
+            rows.append(StorageEntry(
+                index, name, name, self._text(types[index]),
+                unit, size, used_value
+            ))
 
-        size_bytes = int(size_raw)
-        used_bytes = int(used_raw)
-
-        if size_bytes <= 0:
-            raise SnmpError("Invalid memory size returned by SNMP")
-
-        return {
-            "size_gb": size_bytes / (1024 ** 3),
-            "used_gb": used_bytes / (1024 ** 3),
-            "percentage": used_bytes / size_bytes * 100,
-        }
+        # Duplicate descriptions need distinct internal selection keys.
+        grouped: dict[str, list[StorageEntry]] = {}
+        for row in rows:
+            grouped.setdefault(row.name, []).append(row)
+        output: list[StorageEntry] = []
+        for name, group in grouped.items():
+            group.sort(key=lambda row: row.index)
+            for number, row in enumerate(group, 1):
+                key = name if len(group) == 1 else f"{name}#{number}"
+                output.append(StorageEntry(
+                    row.index, key, row.name, row.storage_type,
+                    row.allocation_unit, row.size, row.used
+                ))
+        return output
 
     async def async_get_storage(self) -> dict[str, StorageEntry]:
-        """Read storage table entries."""
-        names = await self._walk(DISK_DESCR_OID)
-        sizes = await self._walk(DISK_SIZE_OID)
-        used_values = await self._walk(DISK_USED_OID)
-        allocation_units = await self._walk(DISK_ALLOCATION_UNIT_OID)
+        rows = await self.async_get_storage_table()
+        return {r.key: r for r in rows if r.storage_type == HR_STORAGE_FIXED_DISK}
 
-        storage: dict[str, StorageEntry] = {}
-
-        for index, name_value in names.items():
-            if (
-                index not in sizes
-                or index not in used_values
-                or index not in allocation_units
-            ):
-                continue
-
-            name = str(name_value.prettyPrint()).strip()
-
-            if not name:
-                continue
-
-            storage[name] = StorageEntry(
-                index=index,
-                name=name,
-                allocation_unit=int(allocation_units[index]),
-                size=int(sizes[index]),
-                used=int(used_values[index]),
-            )
-
-        return storage
+    async def async_get_memory(self) -> dict[str, float] | None:
+        rows = await self.async_get_storage_table()
+        ram_rows = [r for r in rows if r.storage_type == HR_STORAGE_RAM]
+        if not ram_rows:
+            return None
+        ram = max(ram_rows, key=lambda row: row.size_bytes)
+        return {
+            "size_gb": ram.size_bytes / 1024**3,
+            "used_gb": ram.used_bytes / 1024**3,
+            "percentage": ram.used / ram.size * 100,
+        }
