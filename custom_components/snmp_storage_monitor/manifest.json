@@ -1,6 +1,9 @@
 {
   "domain": "snmp_storage_monitor",
   "name": "SNMP Storage Monitor",
+  "categories": [
+    "computers_network.monitoring"
+  ],
   "codeowners": [
     "@Kipjr"
   ],
