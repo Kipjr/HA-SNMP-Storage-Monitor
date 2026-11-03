@@ -3,33 +3,25 @@
     "step": {
       "user": {
         "title": "SNMP Storage Monitor",
-        "description": "Enter the FQDN or IP address and UDP port of the SNMP agent.",
+        "description": "Configure an SNMP v2c agent.",
         "data": {
-          "host": "FQDN / host",
-          "port": "SNMP port",
-          "community": "SNMP community",
+          "host": "FQDN or IP address",
+          "port": "SNMP UDP port",
+          "community": "SNMP v2c community",
           "scan_interval": "Polling interval (seconds)"
-        },
-        "data_description": {
-          "community": "SNMP v2c community string. The default is public.",
-          "scan_interval": "How often the SNMP table is walked."
         }
       },
       "select": {
         "title": "Select sensors",
-        "description": "Select the sensors that should be created. Disk sensors are identified by their SNMP hrStorage name; their SNMP table index may change without changing the Home Assistant entity.",
-        "data": {
-          "memory": "Memory"
-        },
-        "data_description": {
-          "memory": "Memory percentage used; size and used GB are available as attributes."
-        }
+        "description": "Select physical memory and fixed-disk sensors.",
+        "data": {"memory": "Physical memory"}
       }
     },
     "error": {
       "cannot_connect": "Could not connect to the SNMP agent.",
       "invalid_response": "The SNMP agent returned an invalid response.",
-      "unknown": "Unexpected error while querying SNMP."
+      "unknown": "Unexpected error while querying SNMP.",
+      "no_sensors": "Select at least one sensor."
     },
     "abort": {
       "already_configured": "This SNMP agent is already configured."
@@ -38,11 +30,8 @@
   "options": {
     "step": {
       "init": {
-        "title": "Select sensors",
-        "description": "Change which memory and disk sensors are enabled.",
-        "data": {
-          "memory": "Memory"
-        }
+        "title": "SNMP Storage Monitor options",
+        "data": {"memory": "Physical memory"}
       }
     },
     "abort": {
