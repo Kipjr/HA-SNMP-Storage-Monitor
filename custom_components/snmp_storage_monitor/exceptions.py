@@ -1,13 +1,9 @@
-"""Exceptions for SNMP Storage Monitor."""
-
-
+"""Integration exceptions."""
 class SnmpMonitorError(Exception):
-    """Base exception."""
-
+    """Base SNMP integration error."""
 
 class SnmpConnectionError(SnmpMonitorError):
-    """Raised when the SNMP agent cannot be reached."""
-
+    """SNMP agent cannot be reached."""
 
 class SnmpResponseError(SnmpMonitorError):
-    """Raised when the SNMP agent returns an error."""
+    """SNMP agent returned an invalid response."""
