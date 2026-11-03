@@ -6,6 +6,7 @@
   ],
   "config_flow": true,
   "documentation": "https://github.com/kipjr/ha-snmp-storage-monitor",
+  "issue_tracker": "https://github.com/Kipjr/HA-SNMP-Storage-Monitor/issues",
   "integration_type": "hub",
   "iot_class": "local_polling",
   "requirements": [
