@@ -3,7 +3,7 @@ from unittest.mock import AsyncMock
 
 import pytest
 
-from custom_components.snmp_storage_monitor.snmp import SnmpClient
+from custom_components.snmp_storage_monitor.snmp import SnmpClient\nfrom custom_components.snmp_storage_monitor.exceptions import SnmpResponseError
 
 
 @pytest.mark.parametrize(
@@ -23,12 +23,12 @@ async def test_permission_probes_are_independent(
 
     async def fake_get(_oid):
         if not sysname_result:
-            raise RuntimeError("sysName unavailable")
+            raise SnmpResponseError("sysName unavailable")
         return FakeValue("test-host")
 
     async def fake_walk(_oid):
         if not storage_result:
-            raise RuntimeError("hrStorageDescr unavailable")
+            raise SnmpResponseError("hrStorageDescr unavailable")
         return {"1": FakeValue("/")}
     
     client.async_get = AsyncMock(side_effect=fake_get)
