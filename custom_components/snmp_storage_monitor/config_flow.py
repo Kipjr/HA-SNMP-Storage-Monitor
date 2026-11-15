@@ -58,6 +58,7 @@ class SnmpStorageConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     async def async_step_user(self, user_input=None):
         if user_input is not None:
             self._connection = dict(user_input)
+            _LOGGER.debug("Setup started: host=%s port=%s version=%s", self._connection[CONF_HOST], self._connection[CONF_PORT], self._connection[CONF_VERSION])
             return await self.async_step_credentials()
         return self.async_show_form(step_id="user", data_schema=_version_schema())
 
@@ -66,8 +67,10 @@ class SnmpStorageConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         if user_input is not None:
             data = {**self._connection, **user_input}
             try:
+                _LOGGER.debug("Checking SNMP access: host=%s port=%s version=%s", data[CONF_HOST], data[CONF_PORT], data[CONF_VERSION])
                 client = SnmpClient(self.hass, data)
                 sysname_ok, storage_ok = await client.async_test_permissions()
+                _LOGGER.debug("SNMP permission probes complete: host=%s sysName=%s hrStorageDescr=%s", data[CONF_HOST], sysname_ok, storage_ok)
                 if sysname_ok and not storage_ok:
                     errors["base"] = "storage_permission"
                     _LOGGER.error(
@@ -92,7 +95,9 @@ class SnmpStorageConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                         data_schema=_credential_schema(self._connection[CONF_VERSION]),
                         errors=errors,
                     )
+                _LOGGER.debug("Discovering storage table: host=%s", data[CONF_HOST])
                 self._rows = await client.async_get_storage_table()
+                _LOGGER.debug("Storage discovery complete: host=%s rows=%d", data[CONF_HOST], len(self._rows))
                 self._data = data
                 await self.async_set_unique_id(f"{data[CONF_HOST].lower()}:{data[CONF_PORT]}")
                 self._abort_if_unique_id_configured()
@@ -109,9 +114,11 @@ class SnmpStorageConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     async def async_step_select(self, user_input=None):
         if user_input is not None:
             selected = _selected(self._rows, user_input)
+            _LOGGER.debug("Sensor selection submitted: host=%s selected_count=%d", self._data[CONF_HOST], len(selected))
             if not selected:
                 return self.async_show_form(step_id="select",
                     data_schema=_selection_schema(self._rows, set()), errors={"base": "no_sensors"})
+            _LOGGER.info("Setup completed: host=%s selected_sensors=%d", self._data[CONF_HOST], len(selected))
             return self.async_create_entry(title=self._data[CONF_HOST], data=self._data,
                 options={CONF_ENABLED_SENSORS: selected, CONF_SCAN_INTERVAL: self._data[CONF_SCAN_INTERVAL]})
         return self.async_show_form(step_id="select", data_schema=_selection_schema(self._rows, set()))
