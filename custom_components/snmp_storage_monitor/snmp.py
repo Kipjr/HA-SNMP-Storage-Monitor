@@ -152,9 +152,11 @@ class SnmpClient:
                     if text_oid.startswith(base + "."):
                         found[text_oid[len(base) + 1 :]] = value
         except SnmpMonitorError:
+            _LOGGER.exception("SNMP hrStorageDescr probe failed: host=%s", self.host)
+        except Exception:
+            _LOGGER.exception("SNMP WALK failed: host=%s oid=%s", self.host, base)
             raise
-        except Exception as err:
-            raise SnmpConnectionError(f"SNMP WALK failed for {base}") from err
+        
         _LOGGER.debug("SNMP WALK completed: host=%s oid=%s entries=%d", self.host, base, len(found))
         return found
 
