@@ -73,6 +73,7 @@ class SnmpClient:
         self.host = data[CONF_HOST]
         self.port = data[CONF_PORT]
         self.version = data[CONF_VERSION]
+        _LOGGER.debug("SNMP client initialized: host=%s port=%s version=%s", self.host, self.port, self.version)
 
         if self.version == "3":
             from pysnmp.hlapi.v3arch import asyncio as hlapi
@@ -95,17 +96,21 @@ class SnmpClient:
     async def _args(self):
         """Build command arguments with Home Assistant's shared engine."""
         try:
+            _LOGGER.debug("Creating SNMP transport target: host=%s port=%s", self.host, self.port)
             target = await UdpTransportTarget.create(
                 (self.host, self.port), timeout=8, retries=1
             )
-            return await async_create_command_cmd_args(
+            args = await async_create_command_cmd_args(
                 self.hass, self.auth_data, target
             )
+            _LOGGER.debug("SNMP transport target ready: host=%s port=%s", self.host, self.port)
+            return args
         except Exception as err:
             raise SnmpConnectionError("Unable to create SNMP target") from err
 
     async def async_get(self, oid: str):
         """Read one OID."""
+        _LOGGER.debug("SNMP GET started: host=%s oid=%s", self.host, oid)
         try:
             indication, status, index, values = await get_cmd(
                 *await self._args(), ObjectType(ObjectIdentity(oid))
@@ -119,11 +124,13 @@ class SnmpClient:
             raise SnmpResponseError(f"{status.prettyPrint()} at varbind {index}")
         if not values:
             raise SnmpResponseError(f"No response for {oid}")
+        _LOGGER.debug("SNMP GET completed: host=%s oid=%s", self.host, oid)
         return values[0][1]
 
     async def async_walk(self, base: str) -> dict[str, Any]:
         """Walk an OID subtree and return values keyed by table index."""
         found: dict[str, Any] = {}
+        _LOGGER.debug("SNMP WALK started: host=%s oid=%s", self.host, base)
         try:
             async for indication, status, index, varbinds in bulk_cmd(
                 *await self._args(),
@@ -146,6 +153,7 @@ class SnmpClient:
             raise
         except Exception as err:
             raise SnmpConnectionError(f"SNMP WALK failed for {base}") from err
+        _LOGGER.debug("SNMP WALK completed: host=%s oid=%s entries=%d", self.host, base, len(found))
         return found
 
     @staticmethod
@@ -174,6 +182,7 @@ class SnmpClient:
         except SnmpMonitorError as err:
             _LOGGER.debug("SNMP hrStorageDescr probe failed on %s: %s", self.host, err)
 
+        _LOGGER.debug("SNMP permission results: host=%s sysName=%s hrStorageDescr=%s", self.host, sysname_ok, storage_ok)
         return sysname_ok, storage_ok
 
     async def async_test_connection(self) -> None:
@@ -229,6 +238,7 @@ class SnmpClient:
                 )
             )
 
+        _LOGGER.debug("SNMP storage table parsed: host=%s rows=%d", self.host, len(rows))
         identities = [row.identity for row in rows]
         if len(identities) != len(set(identities)):
             raise SnmpResponseError(
