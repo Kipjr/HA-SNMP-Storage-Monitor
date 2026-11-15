@@ -132,13 +132,15 @@ class SnmpClient:
         found: dict[str, Any] = {}
         _LOGGER.debug("SNMP WALK started: host=%s oid=%s", self.host, base)
         try:
-            async for indication, status, index, varbinds in bulk_cmd(
+            iterator = await bulk_cmd(
                 *await self._args(),
                 0,
                 25,
                 ObjectType(ObjectIdentity(base)),
                 lexicographicMode=False,
-            ):
+            )
+
+            async for indication, status, index, varbinds in iterator:
                 if indication:
                     raise SnmpConnectionError(str(indication))
                 if status:
