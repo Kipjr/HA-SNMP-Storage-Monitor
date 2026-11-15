@@ -8,7 +8,7 @@ from pysnmp.hlapi.v3arch.asyncio import CommunityData, UsmUserData, UdpTransport
 from homeassistant.components.snmp.const import MAP_AUTH_PROTOCOLS, MAP_PRIV_PROTOCOLS, SNMP_VERSIONS
 from homeassistant.components.snmp.util import async_create_command_cmd_args
 from homeassistant.core import HomeAssistant
-from .const import *\nSYS_NAME_OID = "1.3.6.1.2.1.1.5.0"
+from .const import *
 from .exceptions import SnmpConnectionError, SnmpResponseError
 
 _LOGGER = logging.getLogger(__name__)
