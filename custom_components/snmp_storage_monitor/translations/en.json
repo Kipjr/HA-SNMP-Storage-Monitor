@@ -26,7 +26,9 @@
       }
     },
     "error": {
-      "cannot_connect": "Could not connect to the SNMP agent. Check host, port, version and credentials.",\n      "storage_permission": "The SNMP agent responds to sysName, but access to hrStorageDescr is denied. Grant read access to the HOST-RESOURCES-MIB storage table.",\n      "snmp_probe_failed": "SNMP test failed: neither sysName nor hrStorageDescr returned readable data. Check connectivity, SNMP version, credentials and read permissions.",
+      "cannot_connect": "Could not connect to the SNMP agent. Check host, port, version and credentials.",
+      "storage_permission": "The SNMP agent responds to sysName, but access to hrStorageDescr is denied. Grant read access to the HOST-RESOURCES-MIB storage table.",
+      "snmp_probe_failed": "SNMP test failed: neither sysName nor hrStorageDescr returned readable data. Check connectivity, SNMP version, credentials and read permissions.",
       "unknown": "Unexpected error while querying SNMP.",
       "no_sensors": "Select at least one sensor."
     },
