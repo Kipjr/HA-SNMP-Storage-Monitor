@@ -16,7 +16,7 @@ from .const import (
     HR_STORAGE_TYPE_OID,
     HR_STORAGE_UNIT_OID,
     HR_STORAGE_USED_OID,
-    SYS_DESCR_OID
+    SYS_DESCR_OID,
     SYS_NAME_OID
 )
 from .exceptions import SnmpConnectionError, SnmpResponseError
