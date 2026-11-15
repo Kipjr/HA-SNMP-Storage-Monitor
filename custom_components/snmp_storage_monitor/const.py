@@ -25,6 +25,6 @@ HR_STORAGE_SIZE_OID = "1.3.6.1.2.1.25.2.3.1.5"
 HR_STORAGE_USED_OID = "1.3.6.1.2.1.25.2.3.1.6"
 HR_STORAGE_RAM = "1.3.6.1.2.1.25.2.1.2"
 HR_STORAGE_FIXED_DISK = "1.3.6.1.2.1.25.2.1.4"
-SNMP_VERSIONS = ("1", "2c", "3")
+SNMP_VERSIONS = {"1": 0, "2c": 1, "3": None}
 AUTH_PROTOCOLS = ("none", "hmac-md5", "hmac-sha", "hmac128-sha224", "hmac192-sha256", "hmac256-sha384", "hmac384-sha512")
 PRIV_PROTOCOLS = ("none", "des", "3des-ede", "aes-cfb-128", "aes-cfb-192", "aes-cfb-256")
