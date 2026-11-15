@@ -75,8 +75,43 @@ class SnmpClient:
         except Exception as err: raise SnmpConnectionError(f"SNMP WALK failed for {base}") from err
         return found
 
+    @staticmethod
+    def _has_snmp_value(value):
+        """Return false for SNMP exception values such as noSuchObject."""
+        rendered = value.prettyPrint().strip().lower()
+        return bool(rendered) and not rendered.startswith(("no such", "end of mib"))
+
+    async def async_test_permissions(self):
+        """Probe sysName and hrStorageDescr independently.
+
+        A readable sysName without readable storage data indicates that the
+        agent is reachable but the configured SNMP user lacks storage access.
+        """
+        sysname_ok = False
+        storage_ok = False
+
+        try:
+            sysname_ok = self._has_snmp_value(await self.async_get(SYS_NAME_OID))
+        except SnmpMonitorError as err:
+            _LOGGER.debug("SNMP sysName probe failed on %s: %s", self.host, err)
+
+        try:
+            descriptions = await self.async_walk(HR_STORAGE_DESCR_OID)
+            storage_ok = bool(descriptions) and any(
+                self._has_snmp_value(value) for value in descriptions.values()
+            )
+        except SnmpMonitorError as err:
+            _LOGGER.debug("SNMP hrStorageDescr probe failed on %s: %s", self.host, err)
+
+        return sysname_ok, storage_ok
+
     async def async_test_connection(self):
-        await self.async_get(SYS_DESCR_OID)
+        """Compatibility wrapper: require the storage table to be readable."""
+        sysname_ok, storage_ok = await self.async_test_permissions()
+        if sysname_ok and not storage_ok:
+            raise SnmpResponseError("SNMP agent is reachable, but hrStorageDescr is not readable")
+        if not sysname_ok and not storage_ok:
+            raise SnmpConnectionError("Neither sysName nor hrStorageDescr is readable")
 
     async def async_get_storage_table(self):
         columns = await asyncio.gather(

@@ -67,7 +67,31 @@ class SnmpStorageConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             data = {**self._connection, **user_input}
             try:
                 client = SnmpClient(self.hass, data)
-                await client.async_test_connection()
+                sysname_ok, storage_ok = await client.async_test_permissions()
+                if sysname_ok and not storage_ok:
+                    errors["base"] = "storage_permission"
+                    _LOGGER.error(
+                        "SNMP permission check failed for %s: sysName is readable, "
+                        "but hrStorageDescr is not readable",
+                        data.get(CONF_HOST),
+                    )
+                    return self.async_show_form(
+                        step_id="credentials",
+                        data_schema=_credential_schema(self._connection[CONF_VERSION]),
+                        errors=errors,
+                    )
+                if not sysname_ok and not storage_ok:
+                    errors["base"] = "snmp_probe_failed"
+                    _LOGGER.error(
+                        "SNMP permission/connectivity check failed for %s: "
+                        "neither sysName nor hrStorageDescr is readable",
+                        data.get(CONF_HOST),
+                    )
+                    return self.async_show_form(
+                        step_id="credentials",
+                        data_schema=_credential_schema(self._connection[CONF_VERSION]),
+                        errors=errors,
+                    )
                 self._rows = await client.async_get_storage_table()
                 self._data = data
                 await self.async_set_unique_id(f"{data[CONF_HOST].lower()}:{data[CONF_PORT]}")
