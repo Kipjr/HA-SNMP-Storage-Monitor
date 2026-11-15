@@ -1,0 +1,39 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "SNMP Storage Monitor",
+        "description": "Set the SNMP host, port and protocol version.",
+        "data": {"host": "FQDN or IP address", "port": "SNMP UDP port", "version": "SNMP version"}
+      },
+      "credentials": {
+        "title": "SNMP credentials",
+        "description": "Enter the credentials for the selected SNMP version.",
+        "data": {
+          "community": "SNMP community",
+          "username": "SNMPv3 username",
+          "auth_protocol": "Authentication protocol",
+          "auth_key": "Authentication key",
+          "priv_protocol": "Privacy protocol",
+          "priv_key": "Privacy key",
+          "scan_interval": "Polling interval (seconds)"
+        }
+      },
+      "select": {
+        "title": "Select sensors",
+        "description": "Select physical memory and fixed-disk sensors.",
+        "data": {"memory": "Physical memory"}
+      }
+    },
+    "error": {
+      "cannot_connect": "Could not connect to the SNMP agent. Check host, port, version and credentials.",
+      "unknown": "Unexpected error while querying SNMP.",
+      "no_sensors": "Select at least one sensor."
+    },
+    "abort": {"already_configured": "This SNMP agent is already configured."}
+  },
+  "options": {
+    "step": {"init": {"title": "SNMP Storage Monitor options", "data": {"memory": "Physical memory", "scan_interval": "Polling interval (seconds)"}}},
+    "abort": {"cannot_connect": "Could not query the SNMP agent."}
+  }
+}
