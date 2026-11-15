@@ -12,9 +12,10 @@ from pysnmp.hlapi.v3arch.asyncio import (
     ObjectType,
     UdpTransportTarget,
     UsmUserData,
-    bulk_cmd,
     get_cmd,
+    walk_cmd,
 )
+
 from homeassistant.components.snmp.const import MAP_AUTH_PROTOCOLS, MAP_PRIV_PROTOCOLS
 from homeassistant.components.snmp.util import async_create_command_cmd_args
 from homeassistant.core import HomeAssistant
@@ -127,38 +128,60 @@ class SnmpClient:
         _LOGGER.debug("SNMP GET completed: host=%s oid=%s", self.host, oid)
         return values[0][1]
 
-    async def async_walk(self, base: str) -> dict[str, Any]:
-        """Walk an OID subtree and return values keyed by table index."""
-        found: dict[str, Any] = {}
-        _LOGGER.debug("SNMP WALK started: host=%s oid=%s", self.host, base)
-        try:
-            iterator = await bulk_cmd(
-                *await self._args(),
-                0,
-                25,
-                ObjectType(ObjectIdentity(base)),
-                lexicographicMode=False,
-            )
+async def async_walk(self, base: str) -> list[tuple[str, str]]:
+    """Walk an SNMP subtree and return OID/value pairs."""
+    _LOGGER.debug(
+        "SNMP WALK started: host=%s oid=%s",
+        self.host,
+        base,
+    )
 
-            async for indication, status, index, varbinds in iterator:
-                if indication:
-                    raise SnmpConnectionError(str(indication))
-                if status:
-                    raise SnmpResponseError(
-                        f"{status.prettyPrint()} at varbind {index}"
-                    )
-                for oid, value in varbinds:
-                    text_oid = oid.prettyPrint()
-                    if text_oid.startswith(base + "."):
-                        found[text_oid[len(base) + 1 :]] = value
-        except SnmpMonitorError:
-            _LOGGER.exception("SNMP hrStorageDescr probe failed: host=%s", self.host)
-        except Exception:
-            _LOGGER.exception("SNMP WALK failed: host=%s oid=%s", self.host, base)
-            raise
-        
-        _LOGGER.debug("SNMP WALK completed: host=%s oid=%s entries=%d", self.host, base, len(found))
-        return found
+    results: list[tuple[str, str]] = []
+
+    try:
+        async for indication, status, index, varbinds in walk_cmd(
+            *await self._args(),
+            ObjectType(ObjectIdentity(base)),
+            lexicographicMode=False,
+        ):
+            if indication:
+                raise SnmpConnectionError(
+                    f"SNMP WALK failed: {indication}"
+                )
+
+            if status:
+                raise SnmpConnectionError(
+                    f"SNMP WALK error: {status.prettyPrint()} at index {index}"
+                )
+
+            for oid, value in varbinds:
+                if not self._has_snmp_value(value):
+                    continue
+
+                results.append(
+                    (oid.prettyPrint(), value.prettyPrint())
+                )
+
+        _LOGGER.debug(
+            "SNMP WALK completed: host=%s oid=%s entries=%d",
+            self.host,
+            base,
+            len(results),
+        )
+
+        return results
+
+    except SnmpMonitorError:
+        raise
+    except Exception as err:
+        _LOGGER.exception(
+            "SNMP WALK failed: host=%s oid=%s",
+            self.host,
+            base,
+        )
+        raise SnmpConnectionError(
+            f"SNMP WALK failed for {base}"
+        ) from err
 
     @staticmethod
     def _has_snmp_value(value: Any) -> bool:
