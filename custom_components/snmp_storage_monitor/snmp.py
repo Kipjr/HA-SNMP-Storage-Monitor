@@ -203,10 +203,7 @@ class SnmpClient:
 
         try:
             descriptions = await self.async_walk(HR_STORAGE_DESCR_OID)
-            storage_ok = any(
-                self._has_snmp_value(value)
-                for _, value in descriptions
-            )
+            storage_ok = bool(descriptions)
         except SnmpMonitorError as err:
             _LOGGER.debug("SNMP hrStorageDescr probe failed on %s: %s", self.host, err)
 
