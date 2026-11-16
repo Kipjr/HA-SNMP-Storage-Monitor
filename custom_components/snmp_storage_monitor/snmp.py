@@ -128,60 +128,60 @@ class SnmpClient:
         _LOGGER.debug("SNMP GET completed: host=%s oid=%s", self.host, oid)
         return values[0][1]
 
-async def async_walk(self, base: str) -> list[tuple[str, str]]:
-    """Walk an SNMP subtree and return OID/value pairs."""
-    _LOGGER.debug(
-        "SNMP WALK started: host=%s oid=%s",
-        self.host,
-        base,
-    )
-
-    results: list[tuple[str, str]] = []
-
-    try:
-        async for indication, status, index, varbinds in walk_cmd(
-            *await self._args(),
-            ObjectType(ObjectIdentity(base)),
-            lexicographicMode=False,
-        ):
-            if indication:
-                raise SnmpConnectionError(
-                    f"SNMP WALK failed: {indication}"
-                )
-
-            if status:
-                raise SnmpConnectionError(
-                    f"SNMP WALK error: {status.prettyPrint()} at index {index}"
-                )
-
-            for oid, value in varbinds:
-                if not self._has_snmp_value(value):
-                    continue
-
-                results.append(
-                    (oid.prettyPrint(), value.prettyPrint())
-                )
-
+    async def async_walk(self, base: str) -> list[tuple[str, str]]:
+        """Walk an SNMP subtree and return OID/value pairs."""
         _LOGGER.debug(
-            "SNMP WALK completed: host=%s oid=%s entries=%d",
-            self.host,
-            base,
-            len(results),
-        )
-
-        return results
-
-    except SnmpMonitorError:
-        raise
-    except Exception as err:
-        _LOGGER.exception(
-            "SNMP WALK failed: host=%s oid=%s",
+            "SNMP WALK started: host=%s oid=%s",
             self.host,
             base,
         )
-        raise SnmpConnectionError(
-            f"SNMP WALK failed for {base}"
-        ) from err
+    
+        results: list[tuple[str, str]] = []
+    
+        try:
+            async for indication, status, index, varbinds in walk_cmd(
+                *await self._args(),
+                ObjectType(ObjectIdentity(base)),
+                lexicographicMode=False,
+            ):
+                if indication:
+                    raise SnmpConnectionError(
+                        f"SNMP WALK failed: {indication}"
+                    )
+    
+                if status:
+                    raise SnmpConnectionError(
+                        f"SNMP WALK error: {status.prettyPrint()} at index {index}"
+                    )
+    
+                for oid, value in varbinds:
+                    if not self._has_snmp_value(value):
+                        continue
+    
+                    results.append(
+                        (oid.prettyPrint(), value.prettyPrint())
+                    )
+    
+            _LOGGER.debug(
+                "SNMP WALK completed: host=%s oid=%s entries=%d",
+                self.host,
+                base,
+                len(results),
+            )
+    
+            return results
+    
+        except SnmpMonitorError:
+            raise
+        except Exception as err:
+            _LOGGER.exception(
+                "SNMP WALK failed: host=%s oid=%s",
+                self.host,
+                base,
+            )
+            raise SnmpConnectionError(
+                f"SNMP WALK failed for {base}"
+            ) from err
 
     @staticmethod
     def _has_snmp_value(value: Any) -> bool:
