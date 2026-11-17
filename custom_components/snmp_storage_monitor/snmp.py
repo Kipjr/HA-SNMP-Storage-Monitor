@@ -1,4 +1,5 @@
 """Async SNMP client using Home Assistant's shared SNMP engine."""
+
 from __future__ import annotations
 
 import asyncio
@@ -6,6 +7,7 @@ import logging
 from dataclasses import dataclass
 from typing import Any
 
+from pysnmp.hlapi.v3arch import asyncio as pysnmp_asyncio
 from pysnmp.hlapi.v3arch.asyncio import (
     CommunityData,
     ObjectIdentity,
@@ -31,8 +33,6 @@ from .const import (
     CONF_USERNAME,
     CONF_VERSION,
     HR_STORAGE_DESCR_OID,
-    HR_STORAGE_FIXED_DISK,
-    HR_STORAGE_RAM,
     HR_STORAGE_SIZE_OID,
     HR_STORAGE_TYPE_OID,
     HR_STORAGE_UNIT_OID,
@@ -47,7 +47,7 @@ _LOGGER = logging.getLogger(__name__)
 
 @dataclass(frozen=True, slots=True)
 class StorageEntry:
-    """Storage row. Index is transport metadata only."""
+    """One storage table row. The index is transport metadata only."""
 
     index: str
     identity: str
@@ -59,10 +59,12 @@ class StorageEntry:
 
     @property
     def size_bytes(self) -> int:
+        """Return total storage capacity in bytes."""
         return self.unit * self.size
 
     @property
     def used_bytes(self) -> int:
+        """Return used storage capacity in bytes."""
         return self.unit * self.used
 
 
@@ -70,23 +72,31 @@ class SnmpClient:
     """Async SNMP v1/v2c/v3 client."""
 
     def __init__(self, hass: HomeAssistant, data: dict[str, Any]) -> None:
+        """Initialise the SNMP client and authentication data."""
         self.hass = hass
         self.host = data[CONF_HOST]
         self.port = data[CONF_PORT]
         self.version = data[CONF_VERSION]
-        _LOGGER.debug("SNMP client initialized: host=%s port=%s version=%s", self.host, self.port, self.version)
+        _LOGGER.debug(
+            "SNMP client initialized: host=%s port=%s version=%s",
+            self.host,
+            self.port,
+            self.version,
+        )
 
         if self.version == "3":
-            from pysnmp.hlapi.v3arch import asyncio as hlapi
-
             auth_protocol = data.get(CONF_AUTH_PROTOCOL, "none")
             priv_protocol = data.get(CONF_PRIV_PROTOCOL, "none")
             self.auth_data = UsmUserData(
                 data[CONF_USERNAME],
                 data.get(CONF_AUTH_KEY) or None,
                 data.get(CONF_PRIV_KEY) or None,
-                authProtocol=getattr(hlapi, MAP_AUTH_PROTOCOLS[auth_protocol]),
-                privProtocol=getattr(hlapi, MAP_PRIV_PROTOCOLS[priv_protocol]),
+                authProtocol=getattr(
+                    pysnmp_asyncio, MAP_AUTH_PROTOCOLS[auth_protocol]
+                ),
+                privProtocol=getattr(
+                    pysnmp_asyncio, MAP_PRIV_PROTOCOLS[priv_protocol]
+                ),
             )
         else:
             self.auth_data = CommunityData(
@@ -97,14 +107,22 @@ class SnmpClient:
     async def _args(self):
         """Build command arguments with Home Assistant's shared engine."""
         try:
-            _LOGGER.debug("Creating SNMP transport target: host=%s port=%s", self.host, self.port)
+            _LOGGER.debug(
+                "Creating SNMP transport target: host=%s port=%s",
+                self.host,
+                self.port,
+            )
             target = await UdpTransportTarget.create(
                 (self.host, self.port), timeout=8, retries=1
             )
             args = await async_create_command_cmd_args(
                 self.hass, self.auth_data, target
             )
-            _LOGGER.debug("SNMP transport target ready: host=%s port=%s", self.host, self.port)
+            _LOGGER.debug(
+                "SNMP transport target ready: host=%s port=%s",
+                self.host,
+                self.port,
+            )
             return args
         except Exception as err:
             raise SnmpConnectionError("Unable to create SNMP target") from err
@@ -125,6 +143,7 @@ class SnmpClient:
             raise SnmpResponseError(f"{status.prettyPrint()} at varbind {index}")
         if not values:
             raise SnmpResponseError(f"No response for {oid}")
+
         _LOGGER.debug("SNMP GET completed: host=%s oid=%s", self.host, oid)
         return values[0][1]
 
@@ -135,9 +154,8 @@ class SnmpClient:
             self.host,
             base,
         )
-    
         results: list[tuple[str, str]] = []
-    
+
         try:
             async for indication, status, index, varbinds in walk_cmd(
                 *await self._args(),
@@ -145,32 +163,25 @@ class SnmpClient:
                 lexicographicMode=False,
             ):
                 if indication:
-                    raise SnmpConnectionError(
-                        f"SNMP WALK failed: {indication}"
-                    )
-    
+                    raise SnmpConnectionError(f"SNMP WALK failed: {indication}")
+
                 if status:
                     raise SnmpConnectionError(
                         f"SNMP WALK error: {status.prettyPrint()} at index {index}"
                     )
-    
+
                 for oid, value in varbinds:
-                    if not self._has_snmp_value(value):
-                        continue
-    
-                    results.append(
-                        (oid.prettyPrint(), value.prettyPrint())
-                    )
-    
+                    if self._has_snmp_value(value):
+                        results.append((oid.prettyPrint(), value.prettyPrint()))
+
             _LOGGER.debug(
                 "SNMP WALK completed: host=%s oid=%s entries=%d",
                 self.host,
                 base,
                 len(results),
             )
-    
             return results
-    
+
         except SnmpMonitorError:
             raise
         except Exception as err:
@@ -179,9 +190,7 @@ class SnmpClient:
                 self.host,
                 base,
             )
-            raise SnmpConnectionError(
-                f"SNMP WALK failed for {base}"
-            ) from err
+            raise SnmpConnectionError(f"SNMP WALK failed for {base}") from err
 
     @staticmethod
     def _has_snmp_value(value: Any) -> bool:
@@ -205,9 +214,18 @@ class SnmpClient:
             descriptions = await self.async_walk(HR_STORAGE_DESCR_OID)
             storage_ok = bool(descriptions)
         except SnmpMonitorError as err:
-            _LOGGER.debug("SNMP hrStorageDescr probe failed on %s: %s", self.host, err)
+            _LOGGER.debug(
+                "SNMP hrStorageDescr probe failed on %s: %s",
+                self.host,
+                err,
+            )
 
-        _LOGGER.debug("SNMP permission results: host=%s sysName=%s hrStorageDescr=%s", self.host, sysname_ok, storage_ok)
+        _LOGGER.debug(
+            "SNMP permission results: host=%s sysName=%s hrStorageDescr=%s",
+            self.host,
+            sysname_ok,
+            storage_ok,
+        )
         return sysname_ok, storage_ok
 
     async def async_test_connection(self) -> None:
@@ -258,7 +276,7 @@ class SnmpClient:
 
             rows.append(
                 StorageEntry(
-                    index=index,
+                    index=str(index),
                     identity=name,
                     name=name,
                     storage_type=types[index],
@@ -268,7 +286,11 @@ class SnmpClient:
                 )
             )
 
-        _LOGGER.debug("SNMP storage table parsed: host=%s rows=%d", self.host, len(rows))
+        _LOGGER.debug(
+            "SNMP storage table parsed: host=%s rows=%d",
+            self.host,
+            len(rows),
+        )
         identities = [row.identity for row in rows]
         if len(identities) != len(set(identities)):
             raise SnmpResponseError(
@@ -276,7 +298,8 @@ class SnmpClient:
             )
         return rows
 
-    def _walk_to_dict(self, rows: list[tuple[str, str]]) -> dict[int, str]:
+    @staticmethod
+    def _walk_to_dict(rows: list[tuple[str, str]]) -> dict[int, str]:
         """Convert SNMP WALK results into an index/value dictionary."""
         result = {}
         for oid, value in rows:
