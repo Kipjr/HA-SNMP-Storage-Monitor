@@ -68,4 +68,5 @@ async def test_permission_probes_are_independent(
 )
 def test_has_snmp_value(value: str, expected: bool) -> None:
     """Verify that SNMP exception values are rejected."""
-    assert SnmpClient._has_snmp_value(FakeValue(value)) is expected  # pylint: disable=protected-access
+    result = SnmpClient._has_snmp_value(FakeValue(value))  # pylint: disable=protected-access
+    assert result is expected
