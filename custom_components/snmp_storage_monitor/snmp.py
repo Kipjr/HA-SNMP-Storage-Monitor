@@ -242,7 +242,7 @@ class SnmpClient:
             if not all(index in column for column in (types, units, sizes, used)):
                 continue
 
-            name = description.prettyPrint().strip()
+            name = description.strip()
             try:
                 unit = int(units[index])
                 size = int(sizes[index])
