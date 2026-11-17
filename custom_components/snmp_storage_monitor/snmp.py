@@ -237,6 +237,7 @@ class SnmpClient:
         units = self._walk_to_dict(units)
         sizes = self._walk_to_dict(sizes)
         used = self._walk_to_dict(used)
+        rows: list[StorageEntry] = []
 
         for index, description in descriptions.items():
             if not all(index in column for column in (types, units, sizes, used)):
