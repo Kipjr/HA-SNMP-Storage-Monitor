@@ -133,6 +133,7 @@ class SnmpStorageConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
     def __init__(self) -> None:
         """Initialise temporary configuration flow data."""
+        super().__init__()
         self._connection: dict[str, Any] = {}
         self._rows: list[StorageEntry] = []
         self._data: dict[str, Any] = {}
