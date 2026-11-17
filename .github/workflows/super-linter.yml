@@ -44,6 +44,7 @@ jobs:
           VALIDATE_JSON: true
           VALIDATE_YAML: true
           VALIDATE_YAML_PRETTIER: true
+          VALIDATE_JSON_PRETTIER: true
           VALIDATE_PYTHON: true
           VALIDATE_PYTHON_PYLINT: true
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
