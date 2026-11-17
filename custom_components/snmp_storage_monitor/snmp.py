@@ -224,15 +224,19 @@ class SnmpClient:
 
     async def async_get_storage_table(self) -> list[StorageEntry]:
         """Read and join HOST-RESOURCES-MIB storage table columns."""
-        columns = await asyncio.gather(
+        types, descriptions, allocation_units, sizes, used = await asyncio.gather(
             self.async_walk(HR_STORAGE_TYPE_OID),
             self.async_walk(HR_STORAGE_DESCR_OID),
-            self.async_walk(HR_STORAGE_UNIT_OID),
+            self.async_walk(HR_STORAGE_ALLOCATION_UNITS_OID),
             self.async_walk(HR_STORAGE_SIZE_OID),
             self.async_walk(HR_STORAGE_USED_OID),
         )
-        types, descriptions, units, sizes, used = columns
-        rows: list[StorageEntry] = []
+
+        types = self._walk_to_dict(types)
+        descriptions = self._walk_to_dict(descriptions)
+        allocation_units = self._walk_to_dict(allocation_units)
+        sizes = self._walk_to_dict(sizes)
+        used = self._walk_to_dict(used)
 
         for index, description in descriptions.items():
             if not all(index in column for column in (types, units, sizes, used)):
@@ -270,3 +274,11 @@ class SnmpClient:
                 "Duplicate hrStorageDescr values; stable identity is ambiguous"
             )
         return rows
+
+    def _walk_to_dict(self, rows: list[tuple[str, str]]) -> dict[int, str]:
+        """Convert SNMP WALK results into an index/value dictionary."""
+        result = {}
+        for oid, value in rows:
+            index = int(oid.rsplit(".", 1)[-1])
+            result[index] = value
+        return result
