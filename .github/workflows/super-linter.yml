@@ -2,8 +2,8 @@
 name: Lint Code Base
 
 on:
-#  push:
-#    branches: [ "dev" ]
+  push:
+    branches: [ "dev" ]
   pull_request:
     branches: ["master"]
 
