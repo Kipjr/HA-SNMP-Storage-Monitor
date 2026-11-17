@@ -261,7 +261,7 @@ class SnmpClient:
                     index=index,
                     identity=name,
                     name=name,
-                    storage_type=types[index].prettyPrint(),
+                    storage_type=types[index],
                     unit=unit,
                     size=size,
                     used=used_count,
