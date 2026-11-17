@@ -53,17 +53,17 @@ class StorageEntry:
     identity: str
     name: str
     storage_type: str
-    allocation_unit: int
+    unit: int
     size: int
     used: int
 
     @property
     def size_bytes(self) -> int:
-        return self.allocation_unit * self.size
+        return self.unit * self.size
 
     @property
     def used_bytes(self) -> int:
-        return self.allocation_unit * self.used
+        return self.unit * self.used
 
 
 class SnmpClient:
