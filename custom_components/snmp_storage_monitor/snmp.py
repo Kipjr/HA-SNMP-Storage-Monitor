@@ -224,7 +224,7 @@ class SnmpClient:
 
     async def async_get_storage_table(self) -> list[StorageEntry]:
         """Read and join HOST-RESOURCES-MIB storage table columns."""
-        types, descriptions, allocation_units, sizes, used = await asyncio.gather(
+        types, descriptions, units, sizes, used = await asyncio.gather(
             self.async_walk(HR_STORAGE_TYPE_OID),
             self.async_walk(HR_STORAGE_DESCR_OID),
             self.async_walk(HR_STORAGE_UNIT_OID),
@@ -234,7 +234,7 @@ class SnmpClient:
 
         types = self._walk_to_dict(types)
         descriptions = self._walk_to_dict(descriptions)
-        allocation_units = self._walk_to_dict(allocation_units)
+        units = self._walk_to_dict(units)
         sizes = self._walk_to_dict(sizes)
         used = self._walk_to_dict(used)
 
@@ -244,7 +244,7 @@ class SnmpClient:
 
             name = description.prettyPrint().strip()
             try:
-                allocation_unit = int(units[index])
+                unit = int(units[index])
                 size = int(sizes[index])
                 used_count = int(used[index])
             except (TypeError, ValueError) as err:
@@ -252,7 +252,7 @@ class SnmpClient:
                     "Invalid numeric value in hrStorageTable"
                 ) from err
 
-            if not name or allocation_unit <= 0 or size <= 0:
+            if not name or unit <= 0 or size <= 0:
                 continue
 
             rows.append(
@@ -261,7 +261,7 @@ class SnmpClient:
                     identity=name,
                     name=name,
                     storage_type=types[index].prettyPrint(),
-                    allocation_unit=allocation_unit,
+                    unit=unit,
                     size=size,
                     used=used_count,
                 )
