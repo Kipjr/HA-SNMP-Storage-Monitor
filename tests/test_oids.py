@@ -1,4 +1,5 @@
 """OID definition tests."""
+
 from custom_components.snmp_storage_monitor.const import (
     HR_STORAGE_DESCR_OID,
     HR_STORAGE_FIXED_DISK,
@@ -13,6 +14,7 @@ from custom_components.snmp_storage_monitor.const import (
 
 
 def test_hr_storage_column_oids() -> None:
+    """Verify the HOST-RESOURCES-MIB storage column OIDs."""
     assert HR_STORAGE_TYPE_OID == "1.3.6.1.2.1.25.2.3.1.2"
     assert HR_STORAGE_DESCR_OID == "1.3.6.1.2.1.25.2.3.1.3"
     assert HR_STORAGE_UNIT_OID == "1.3.6.1.2.1.25.2.3.1.4"
@@ -21,10 +23,12 @@ def test_hr_storage_column_oids() -> None:
 
 
 def test_storage_types_and_sysname_oid() -> None:
+    """Verify storage type and system name OIDs."""
     assert HR_STORAGE_RAM == "1.3.6.1.2.1.25.2.1.2"
     assert HR_STORAGE_FIXED_DISK == "1.3.6.1.2.1.25.2.1.4"
     assert SYS_NAME_OID == "1.3.6.1.2.1.1.5.0"
 
 
 def test_snmp_version_mapping() -> None:
+    """Verify PySNMP message processing model mappings."""
     assert SNMP_VERSIONS == {"1": 0, "2c": 1, "3": None}
