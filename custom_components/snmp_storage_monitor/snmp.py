@@ -227,7 +227,7 @@ class SnmpClient:
         types, descriptions, allocation_units, sizes, used = await asyncio.gather(
             self.async_walk(HR_STORAGE_TYPE_OID),
             self.async_walk(HR_STORAGE_DESCR_OID),
-            self.async_walk(HR_STORAGE_ALLOCATION_UNITS_OID),
+            self.async_walk(HR_STORAGE_UNIT_OID),
             self.async_walk(HR_STORAGE_SIZE_OID),
             self.async_walk(HR_STORAGE_USED_OID),
         )
