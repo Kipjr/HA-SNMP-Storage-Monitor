@@ -21,7 +21,7 @@
       },
       "select": {
         "title": "Select sensors",
-        "description": "Select physical memory and fixed-disk sensors.",
+        "description": "Select physical memory and disk metrics: free percentage, free bytes, and used percentage.",
         "data": {"memory": "Physical memory"}
       }
     },
