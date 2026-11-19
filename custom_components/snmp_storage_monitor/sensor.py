@@ -102,20 +102,20 @@ class DiskSensor(BaseStorageSensor):
         super().__init__(coordinator, entry)
         self.identity = identity
         self.metric = metric
-        identity_token = "root" if identity == "/" else hashlib.sha256(identity.encode()).hexdigest()
+        identity_token = (\n            "root" if identity == "/"\n            else hashlib.sha256(identity.encode()).hexdigest()\n        )
         self._attr_unique_id = f"{entry.entry_id}_disk_{identity_token}_{metric}"
-        self._attr_native_unit_of_measurement = PERCENTAGE if metric.endswith("percent") else UnitOfInformation.BYTES
+        self._attr_native_unit_of_measurement = (\n            PERCENTAGE if metric.endswith("percent") else UnitOfInformation.BYTES\n        )
 
     @property
     def name(self) -> str:
         """Return the current disk name."""
         disk = self.coordinator.data.disks.get(self.identity)
-        metric_name = {"free_percent": "Free (%)", "free_bytes": "Free", "used_percent": "Used (%)"}[self.metric]
+        metric_name = {\n            "free_percent": "Free (%)",\n            "free_bytes": "Free",\n            "used_percent": "Used (%)",\n        }[self.metric]
         return f"{disk.name} {metric_name}" if disk else f"{self.identity} {metric_name}"
 
     @property
     def native_value(self) -> float | None:
-        """Return current disk usage percentage."""
+        """Return the selected disk metric."""
         disk = self.coordinator.data.disks.get(self.identity)
         if not disk or not disk.size:
             return None
