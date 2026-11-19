@@ -73,7 +73,7 @@ class MemorySensor(BaseStorageSensor):
     def native_value(self) -> float | None:
         """Return current memory usage percentage."""
         data = self.coordinator.data.memory
-        return round(data.percentage, 1) if data else None
+        return data.percentage if data else None
 
     @property
     def extra_state_attributes(self) -> dict[str, float]:
@@ -82,8 +82,8 @@ class MemorySensor(BaseStorageSensor):
         if not data:
             return {}
         return {
-            "size_gb": round(data.size_gb, 2),
-            "used_gb": round(data.used_gb, 2),
+            "size_gb": data.size_gb,
+            "used_gb": data.used_gb,
         }
 
 
@@ -115,7 +115,7 @@ class DiskSensor(BaseStorageSensor):
         disk = self.coordinator.data.disks.get(self.identity)
         if not disk or not disk.size:
             return None
-        return round(disk.used / disk.size * 100, 1)
+        return disk.used / disk.size * 100
 
     @property
     def extra_state_attributes(self) -> dict[str, float]:
@@ -124,6 +124,6 @@ class DiskSensor(BaseStorageSensor):
         if not disk:
             return {}
         return {
-            "size_gb": round(disk.size_bytes / 1024**3, 2),
-            "used_gb": round(disk.used_bytes / 1024**3, 2),
+            "size_gb": disk.size_bytes / 1024**3,
+            "used_gb": disk.used_bytes / 1024**3,
         }
