@@ -107,10 +107,10 @@ def _selection_schema(rows: list[StorageEntry], selected: set[str]) -> vol.Schem
 
     for row in rows:
         if row.storage_type == HR_STORAGE_FIXED_DISK:
-            key = DISK_PREFIX + row.identity
-            fields[vol.Optional(key, default=key in selected)] = (
-                selector.BooleanSelector()
-            )
+            legacy_key = DISK_PREFIX + row.identity
+            for metric, label in (("free_percent", "Free (%)"), ("free_bytes", "Free (bytes)"), ("used_percent", "Used (%)")):
+                key = f"{legacy_key}:{metric}"
+                fields[vol.Optional(key, default=(key in selected or legacy_key in selected))] = selector.BooleanSelector()
     return vol.Schema(fields)
 
 
@@ -118,10 +118,12 @@ def _selected(rows: list[StorageEntry], data: dict[str, Any]) -> list[str]:
     """Return enabled sensor keys from the selection form data."""
     selected = [MEMORY_KEY] if data.get(MEMORY_KEY) else []
     selected.extend(
-        DISK_PREFIX + row.identity
+        f"{DISK_PREFIX}{row.identity}:{metric}"
         for row in rows
         if row.storage_type == HR_STORAGE_FIXED_DISK
-        and data.get(DISK_PREFIX + row.identity)
+        for metric in ("free_percent", "free_bytes", "used_percent")
+        if data.get(f"{DISK_PREFIX}{row.identity}:{metric}")
+        or data.get(DISK_PREFIX + row.identity)
     )
     return selected
 
