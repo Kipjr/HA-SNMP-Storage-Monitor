@@ -206,7 +206,7 @@ class SnmpStorageConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 )
                 self._data = data
                 await self.async_set_unique_id(
-                    f"{data[CONF_HOST].lower()}:{data[CONF_PORT]}"
+                    f"Usage {data[CONF_HOST].lower()}:{data[CONF_PORT]}"
                 )
                 self._abort_if_unique_id_configured()
                 return await self.async_step_select()
