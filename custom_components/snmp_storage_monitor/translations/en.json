@@ -12,7 +12,7 @@
       },
       "credentials": {
         "title": "SNMP credentials",
-        "description": "Enter the credentials for the selected SNMP version.",
+        "description": "Enter the credentials. For SNMP v1 or v2c, traffic is unencrypted. <details><summary>Security details</summary>SNMP traffic between Home Assistant and the target is plain text. It exposes the community string, OIDs and values. Devices on the subnet, including switches and firewalls, may be able to read this traffic. Use SNMPv3 whenever possible.</details>",
         "data": {
           "community": "SNMP community",
           "username": "SNMPv3 username",
