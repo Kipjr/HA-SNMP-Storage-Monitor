@@ -16,6 +16,7 @@ from .const import (
     CONF_AUTH_PROTOCOL,
     CONF_COMMUNITY,
     CONF_ENABLED_SENSORS,
+    CONF_DISKS_SEPARATE_DEVICE,
     CONF_HOST,
     CONF_PORT,
     CONF_PRIV_KEY,
@@ -97,7 +98,7 @@ def _credential_schema(version: str) -> vol.Schema:
     return vol.Schema(fields)
 
 
-def _selection_schema(rows: list[StorageEntry], selected: set[str]) -> vol.Schema:
+def _selection_schema(rows: list[StorageEntry], selected: set[str], separate_device: bool = False) -> vol.Schema:
     """Build the sensor selection schema from discovered storage rows."""
     fields: dict[Any, Any] = {}
     if any(row.storage_type == HR_STORAGE_RAM for row in rows):
@@ -259,6 +260,7 @@ class SnmpStorageConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 options={
                     CONF_ENABLED_SENSORS: selected,
                     CONF_SCAN_INTERVAL: self._data[CONF_SCAN_INTERVAL],
+                    CONF_DISKS_SEPARATE_DEVICE: user_input.get(CONF_DISKS_SEPARATE_DEVICE, False),
                 },
             )
         return self.async_show_form(
@@ -302,7 +304,7 @@ class SnmpStorageOptionsFlow(config_entries.OptionsFlow):
         interval = self.entry.options.get(
             CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL
         )
-        schema = _selection_schema(rows, selected_now)
+        schema = _selection_schema(rows, selected_now, self.entry.options.get(CONF_DISKS_SEPARATE_DEVICE, False))
         schema = schema.extend(
             {
                 vol.Required(CONF_SCAN_INTERVAL, default=interval): vol.All(
@@ -325,6 +327,7 @@ class SnmpStorageOptionsFlow(config_entries.OptionsFlow):
                 data={
                     CONF_ENABLED_SENSORS: selected,
                     CONF_SCAN_INTERVAL: user_input[CONF_SCAN_INTERVAL],
+                    CONF_DISKS_SEPARATE_DEVICE: user_input.get(CONF_DISKS_SEPARATE_DEVICE, False),
                 },
             )
         return self.async_show_form(step_id="init", data_schema=schema)
