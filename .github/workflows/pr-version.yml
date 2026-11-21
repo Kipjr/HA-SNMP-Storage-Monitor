@@ -7,39 +7,36 @@ on:
 
 permissions:
   contents: write
-  pull-requests: read
 
 jobs:
   preview:
     if: github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout PR
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
         with:
           ref: ${{ github.event.pull_request.head.sha }}
           fetch-depth: 0
 
-      - name: Generate beta tag
+      - name: Create beta tag
         shell: bash
         env:
-          GH_TOKEN: ${{ github.token }}
-          PR_NUMBER: ${{ github.event.pull_request.number }}
           PR_COMMITS: ${{ github.event.pull_request.commits }}
           LABELS: ${{ join(github.event.pull_request.labels.*.name, ',') }}
+          PR_SHA: ${{ github.event.pull_request.head.sha }}
         run: |
           set -euo pipefail
+          matches=0
           label=""
           for candidate in major minor patch; do
-            if [[ ",$LABELS," == *",version:$candidate,"* ]]; then label="$candidate"; fi
+            if [[ ",$LABELS," == *",version:$candidate,"* ]]; then label="$candidate"; matches=$((matches+1)); fi
           done
-          if [[ -z "$label" ]]; then
-            echo "Missing required label: version:major, version:minor or version:patch"
-            exit 1
-          fi
+          if [[ "$matches" != "1" ]]; then echo "Set exactly one version label (version:major/minor/patch)."; exit 1; fi
           git fetch --tags
-          latest="$(git tag --list '[0-9]*.[0-9]*.[0-9]*' --sort=-v:refname | head -n1)"
-          latest="${latest:-0.0.0}"
+          latest="0.0.0"
+          while IFS= read -r tag; do
+            if [[ "$tag" =~ ^([0-9]+)\.([0-9]+)\.([0-9]+)$ ]]; then latest="$tag"; break; fi
+          done < <(git tag --list --sort=-v:refname)
           IFS=. read -r major minor patch <<< "$latest"
           case "$label" in
             major) major=$((major+1)); minor=0; patch=0 ;;
@@ -47,11 +44,8 @@ jobs:
             patch) patch=$((patch+1)) ;;
           esac
           version="$major.$minor.$patch-beta.$PR_COMMITS"
-          echo "Preview version: $version"
-          if git rev-parse "$version" >/dev/null 2>&1; then
-            echo "Tag already exists: $version"
-          else
-            git tag "$version" "${{ github.event.pull_request.head.sha }}"
+          if ! git rev-parse "$version" >/dev/null 2>&1; then
+            git tag "$version" "$PR_SHA"
             git push origin "$version"
           fi
-          gh pr comment "$PR_NUMBER" --repo "$GITHUB_REPOSITORY" --edit-last --body "Beta version preview: `$version`" || gh pr comment "$PR_NUMBER" --repo "$GITHUB_REPOSITORY" --body "Beta version preview: `$version"
+          echo "Beta tag: $version"
