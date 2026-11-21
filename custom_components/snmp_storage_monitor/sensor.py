@@ -121,7 +121,7 @@ class DiskSensor(BaseStorageSensor):
         """Return the disk metric name."""
         disk = self.coordinator.data.disks.get(self.identity)
         disk_name = "root" if self.identity == "/" else (disk.name if disk else self.identity)
-        metric_name = "Free Space (%)" if self.metric == "free_percent" else "Free MB"
+        metric_name = "Free %" if self.metric == "free_percent" else "Free MB"
         return f"Disk: {disk_name} - {metric_name}"
 
     @property
