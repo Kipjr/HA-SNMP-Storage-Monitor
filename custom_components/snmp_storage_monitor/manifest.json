@@ -1,12 +1,14 @@
 {
   "domain": "snmp_storage_monitor",
   "name": "SNMP Storage Monitor",
-  "codeowners": ["@Kipjr"],
+  "codeowners": [
+    "@Kipjr"
+  ],
   "config_flow": true,
   "documentation": "https://github.com/kipjr/ha-snmp-storage-monitor",
   "integration_type": "hub",
   "iot_class": "local_polling",
   "issue_tracker": "https://github.com/Kipjr/HA-SNMP-Storage-Monitor/issues",
   "requirements": [],
-  "version": "0.4.0"
+  "version": "0.5.0-beta.8"
 }
