@@ -108,7 +108,7 @@ def _selection_schema(rows: list[StorageEntry], selected: set[str]) -> vol.Schem
 
     for row in rows:
         if row.storage_type == HR_STORAGE_FIXED_DISK and (
-                not row.identity.startswith("/run", "/dev")
+                not row.identity.startswith(("/run", "/dev"))
             ):
             legacy_key = DISK_PREFIX + row.identity
             for metric in ("free_percent", "free_mb"):
@@ -217,8 +217,6 @@ class SnmpStorageConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 )
                 self._abort_if_unique_id_configured()
                 return await self.async_step_select()
-            except config_entries.AbortFlow:
-                raise
             except SnmpMonitorError as err:
                 _LOGGER.error(
                     "SNMP setup failed for %s: %s",
