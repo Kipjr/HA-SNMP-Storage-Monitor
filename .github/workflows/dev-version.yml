@@ -1,0 +1,51 @@
+name: Dev Version
+
+on:
+  pull_request:
+    branches: [dev]
+    types: [closed]
+
+permissions:
+  contents: write
+  pull-requests: read
+
+jobs:
+  tag-dev:
+    if: github.event.pull_request.merged == true && github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout dev
+        uses: actions/checkout@v4
+        with:
+          ref: dev
+          fetch-depth: 0
+
+      - name: Create dev tag
+        shell: bash
+        env:
+          LABELS: ${{ join(github.event.pull_request.labels.*.name, ',') }}
+        run: |
+          set -euo pipefail
+          label=""
+          for candidate in major minor patch; do
+            if [[ ",$LABELS," == *",version:$candidate,"* ]]; then label="$candidate"; fi
+          done
+          if [[ -z "$label" ]]; then
+            echo "Missing version label on merged PR."
+            exit 1
+          fi
+          git fetch --tags
+          latest="$(git tag --list '[0-9]*.[0-9]*.[0-9]*' --sort=-v:refname | head -n1)"
+          latest="${latest:-0.0.0}"
+          IFS=. read -r major minor patch <<< "$latest"
+          case "$label" in
+            major) major=$((major+1)); minor=0; patch=0 ;;
+            minor) minor=$((minor+1)); patch=0 ;;
+            patch) patch=$((patch+1)) ;;
+          esac
+          target="$major.$minor.$patch"
+          run_number="${GITHUB_RUN_NUMBER}"
+          tag="$target-dev.$run_number"
+          git tag "$tag" "${GITHUB_SHA}"
+          git push origin "$tag"
+          echo "Created $tag"
