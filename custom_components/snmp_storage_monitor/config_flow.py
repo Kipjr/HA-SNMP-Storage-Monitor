@@ -108,9 +108,12 @@ def _selection_schema(rows: list[StorageEntry], selected: set[str]) -> vol.Schem
     for row in rows:
         if row.storage_type == HR_STORAGE_FIXED_DISK:
             legacy_key = DISK_PREFIX + row.identity
-            for metric, label in (("free_percent", "Free (%)"), ("free_bytes", "Free (bytes)"), ("used_percent", "Used (%)")):
-                key = f"{legacy_key}:{metric}"
-                fields[vol.Optional(key, default=(key in selected or legacy_key in selected))] = selector.BooleanSelector()
+            for metric in ("free_percent", "free_mb"):
+                key = f"{DISK_PREFIX}{row.identity}:{metric}"
+                default = key in selected or (
+                    legacy_key in selected and metric == "free_percent"
+                )
+                fields[vol.Optional(key, default=default)] = selector.BooleanSelector()
     return vol.Schema(fields)
 
 
@@ -121,9 +124,8 @@ def _selected(rows: list[StorageEntry], data: dict[str, Any]) -> list[str]:
         f"{DISK_PREFIX}{row.identity}:{metric}"
         for row in rows
         if row.storage_type == HR_STORAGE_FIXED_DISK
-        for metric in ("free_percent", "free_bytes", "used_percent")
+        for metric in ("free_percent", "free_mb")
         if data.get(f"{DISK_PREFIX}{row.identity}:{metric}")
-        or data.get(DISK_PREFIX + row.identity)
     )
     return selected
 
