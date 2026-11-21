@@ -50,7 +50,7 @@ def _version_schema() -> vol.Schema:
             vol.Required(CONF_PORT, default=DEFAULT_PORT): vol.All(
                 vol.Coerce(int), vol.Range(min=1, max=65535)
             ),
-            vol.Required(CONF_VERSION, default="2c"): selector.SelectSelector(
+            vol.Required(CONF_VERSION, default="3"): selector.SelectSelector(
                 selector.SelectSelectorConfig(
                     options=list(SNMP_VERSIONS),
                     mode=selector.SelectSelectorMode.DROPDOWN,
