@@ -107,7 +107,7 @@ def _selection_schema(rows: list[StorageEntry], selected: set[str]) -> vol.Schem
         ] = selector.BooleanSelector()
 
     for row in rows:
-        if row.storage_type == HR_STORAGE_FIXED_DISK:
+        if row.storage_type == HR_STORAGE_FIXED_DISK and not row.identity.startswith(("/run", "/dev")):
             legacy_key = DISK_PREFIX + row.identity
             for metric in ("free_percent", "free_mb"):
                 key = f"{DISK_PREFIX}{row.identity}:{metric}"
