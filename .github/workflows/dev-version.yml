@@ -58,6 +58,6 @@ jobs:
             git commit -m "chore: update dev version to $tag"
             git push origin dev
           fi
-          git tag "$tag" "${GITHUB_SHA}"
+          git tag "$tag" "$(git rev-parse HEAD)"
           git push origin "$tag"
           echo "Created $tag"
