@@ -23,9 +23,8 @@ async def async_setup_entry(hass, entry, async_add_entities) -> None:
 
     for item in enabled:
         if item.startswith(DISK_PREFIX):
-            entities.append(
-                DiskSensor(coordinator, entry, item[len(DISK_PREFIX):])
-            )
+            identity, metric = item[len(DISK_PREFIX):].rsplit(":", 1)
+            entities.append(DiskSensor(coordinator, entry, identity, metric))
 
     async_add_entities(entities)
 
@@ -88,42 +87,47 @@ class MemorySensor(BaseStorageSensor):
 
 
 class DiskSensor(BaseStorageSensor):
-    """Report usage for one fixed disk."""
+    """Report selected free-capacity metrics for a fixed disk."""
 
-    # Entity state is exposed through Home Assistant properties.
     # pylint: disable=too-few-public-methods
 
     _attr_icon = "mdi:harddisk"
-    _attr_native_unit_of_measurement = PERCENTAGE
 
-    def __init__(self, coordinator, entry, identity: str) -> None:
-        """Initialise the disk sensor for a storage identity."""
+    def __init__(self, coordinator, entry, identity: str, metric: str) -> None:
+        """Initialise a disk metric sensor."""
         super().__init__(coordinator, entry)
         self.identity = identity
+        self.metric = metric
         digest = hashlib.sha256(identity.encode()).hexdigest()
-        self._attr_unique_id = f"{entry.entry_id}_disk_{digest}"
+        self._attr_unique_id = f"{entry.entry_id}_disk_{digest}_{metric}"
+        self._attr_native_unit_of_measurement = PERCENTAGE if metric == "free_percent" else "MB"
 
     @property
     def name(self) -> str:
-        """Return the current disk name."""
+        """Return the disk metric name."""
         disk = self.coordinator.data.disks.get(self.identity)
-        return disk.name if disk else self.identity
+        disk_name = "root" if self.identity == "/" else (disk.name if disk else self.identity)
+        metric_name = "Free Space (%)" if self.metric == "free_percent" else "Free MB"
+        return f"Disk: {disk_name} - {metric_name}"
 
     @property
     def native_value(self) -> float | None:
-        """Return current disk usage percentage."""
+        """Return free capacity as percentage or megabytes."""
         disk = self.coordinator.data.disks.get(self.identity)
         if not disk or not disk.size:
             return None
-        return disk.used / disk.size * 100
+        if self.metric == "free_percent":
+            return (disk.size - disk.used) / disk.size * 100
+        return (disk.size_bytes - disk.used_bytes) / 1024**2
 
     @property
     def extra_state_attributes(self) -> dict[str, float]:
-        """Return disk size and used capacity in gigabytes."""
+        """Return disk size, used and free capacity in GB."""
         disk = self.coordinator.data.disks.get(self.identity)
         if not disk:
             return {}
         return {
             "size_gb": disk.size_bytes / 1024**3,
             "used_gb": disk.used_bytes / 1024**3,
+            "free_gb": (disk.size_bytes - disk.used_bytes) / 1024**3,
         }
