@@ -2,8 +2,7 @@
 
 import hashlib
 
-from homeassistant.const import PERCENTAGE, UnitOfInformation
-
+from homeassistant.const import PERCENTAGE
 from homeassistant.components.sensor import SensorEntity
 from homeassistant.helpers.entity import DeviceInfo
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
