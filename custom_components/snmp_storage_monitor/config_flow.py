@@ -212,6 +212,8 @@ class SnmpStorageConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 )
                 self._abort_if_unique_id_configured()
                 return await self.async_step_select()
+            except config_entries.AbortFlow:
+                raise
             except SnmpMonitorError as err:
                 _LOGGER.error(
                     "SNMP setup failed for %s: %s",
