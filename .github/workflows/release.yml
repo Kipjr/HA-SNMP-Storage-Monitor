@@ -48,6 +48,6 @@ jobs:
             git commit -m "chore: release version $version"
             git push origin master
           fi
-          git tag "$version" "${GITHUB_SHA}"
+          git tag "$version" "$(git rev-parse HEAD)"
           git push origin "$version"
-          gh release create "$version" --title "$version" --generate-notes --target "${GITHUB_SHA}"
+          gh release create "$version" --title "$version" --generate-notes --target "$(git rev-parse HEAD)"
