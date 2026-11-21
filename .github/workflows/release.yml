@@ -1,0 +1,38 @@
+name: Stable Release
+
+on:
+  push:
+    branches: [master]
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Create stable tag and release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          git fetch --tags
+          dev_tag="$(git tag --list '*-dev.*' --sort=-v:refname | head -n1)"
+          if [[ -z "$dev_tag" ]]; then
+            echo "No dev version tag found. Cannot infer release version."
+            exit 1
+          fi
+          version="${dev_tag%%-dev.*}"
+          if git rev-parse "$version" >/dev/null 2>&1; then
+            echo "Stable tag $version already exists; exiting."
+            exit 0
+          fi
+          git tag "$version" "${GITHUB_SHA}"
+          git push origin "$version"
+          gh release create "$version" --title "$version" --generate-notes --target "${GITHUB_SHA}"
