@@ -10,20 +10,21 @@ permissions:
 
 jobs:
   preview:
-    if: github.event.pull_request.head.repo.full_name == github.repository
+    if: github.event.pull_request.head.repo.full_name == github.repository && !contains(github.event.pull_request.head.commit.message, 'chore: update prerelease version')
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.pull_request.head.sha }}
+          ref: ${{ github.event.pull_request.head.ref }}
           fetch-depth: 0
 
-      - name: Create beta tag
+      - name: Create beta tag and update manifest
         shell: bash
         env:
           PR_COMMITS: ${{ github.event.pull_request.commits }}
           LABELS: ${{ join(github.event.pull_request.labels.*.name, ',') }}
           PR_SHA: ${{ github.event.pull_request.head.sha }}
+          PR_BRANCH: ${{ github.event.pull_request.head.ref }}
         run: |
           set -euo pipefail
           matches=0
@@ -44,8 +45,23 @@ jobs:
             patch) patch=$((patch+1)) ;;
           esac
           version="$major.$minor.$patch-beta.$PR_COMMITS"
+          manifest="custom_components/snmp_storage_monitor/manifest.json"
+          python - "$manifest" "$version" <<'PY'
+          import json,sys
+          path,version=sys.argv[1:]
+          with open(path,encoding="utf-8") as f: data=json.load(f)
+          data["version"]=version
+          with open(path,"w",encoding="utf-8") as f: json.dump(data,f,indent=2); f.write("\n")
+          PY
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add "$manifest"
+          if ! git diff --cached --quiet; then
+            git commit -m "chore: update prerelease version to $version"
+            git push origin "HEAD:$PR_BRANCH"
+          fi
           if ! git rev-parse "$version" >/dev/null 2>&1; then
             git tag "$version" "$PR_SHA"
             git push origin "$version"
           fi
-          echo "Beta tag: $version"
+          echo "Beta version: $version"
