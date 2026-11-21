@@ -1,32 +1,26 @@
 # HA-SNMP-Storage-Monitor
-Home Assistant custom integration for monitoring memory and disk storage over SNMP.
+
+Home Assistant custom integration for monitoring memory and fixed disks over SNMP.
 
 ## Features
+- SNMP v1, v2c and v3 configuration.
+- v1/v2c community credentials.
+- v3 username, authentication protocol/key and privacy protocol/key.
+- Dynamic memory and fixed-disk discovery through HOST-RESOURCES-MIB.
+- User selection of discovered sensors.
+- Async SNMP calls using Home Assistant's SNMP v3arch API and shared engine.
+- Storage values converted using hrStorageAllocationUnits.
 
-- UI-based config flow.
-- First setup asks for FQDN/host, UDP port, community and polling interval.
-- Walks `HOST-RESOURCES-MIB::hrStorageTable`.
-- Discovers disk names dynamically.
-- Disk Home Assistant entities are keyed by the disk name, not the SNMP table index.
-- If the SNMP index changes, the existing entity follows the disk name.
-- Explicit sensor selection during setup and reconfiguration.
-- Each selected disk is one Home Assistant sensor named exactly after the SNMP disk name.
-- Its state is `used / size * 100` in percent; `size_gb` and `used_gb` are state attributes.
-- Memory uses the two OIDs supplied by the integration configuration.
+## Disk identity
+HOST-RESOURCES-MIB does not define a universal disk GUID or device path. This integration uses hrStorageDescr as its portable identity and never uses the SNMP row index as an entity identifier. Duplicate descriptions are rejected because they cannot be uniquely and reliably identified using the standard MIB alone. A vendor-specific MIB is required to expose a disk GUID or physical path where hrStorageDescr does not contain one.
 
-## SNMP OIDs
+The SNMP row index is used only to join columns within one table response. It is not included in entity unique IDs.
 
-Memory:
-- size: `1.3.6.1.2.1.25.2.3.1.5.1`
-- used: `1.3.6.1.2.1.25.2.3.1.5.11`
+## SNMPv3 protocols
+Authentication: none, hmac-md5, hmac-sha, hmac128-sha224, hmac192-sha256, hmac256-sha384, hmac384-sha512.
+Privacy: none, des, 3des-ede, aes-cfb-128, aes-cfb-192, aes-cfb-256.
 
-Disks:
-- name: `1.3.6.1.2.1.25.2.3.1.3.n`
-- used: `1.3.6.1.2.1.25.2.3.1.6.n`
-- size: `1.3.6.1.2.1.25.2.3.1.5.n`
+The integration imports Home Assistant's internal SNMP utility to reuse its shared engine. This is not a public extension API and may require updates when Home Assistant changes its SNMP implementation.
 
-The integration also walks allocation units (`1.3.6.1.2.1.25.2.3.1.4.n`) so disk size can correctly convert the HOST-RESOURCES-MIB size value to bytes before converting to GB.
-
-## HACS
-
-Add the GitHub repository as a custom repository in HACS, category **Integration**.
+## Storage calculations
+hrStorageSize and hrStorageUsed are allocation-unit counts. Both are multiplied by hrStorageAllocationUnits before conversion to GiB. Memory rows are identified by hrStorageRam; disk rows by hrStorageFixedDisk.

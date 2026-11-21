@@ -3,23 +3,42 @@
     "step": {
       "user": {
         "title": "SNMP Storage Monitor",
-        "description": "Configure an SNMP v2c agent.",
+        "description": "Set the SNMP host, port and protocol version.",
         "data": {
           "host": "FQDN or IP address",
           "port": "SNMP UDP port",
-          "community": "SNMP v2c community",
+          "version": "SNMP version"
+        }
+      },
+      "credentials": {
+        "title": "SNMP credentials",
+        "description": "For SNMP v1 or v2c, traffic is unencrypted. SNMP traffic between Home Assistant and the target is plain text. It exposes the community string, OIDs and values. Devices on the subnet, including switches and firewalls, may be able to read this traffic. Use SNMPv3 whenever possible.",
+        "data": {
+          "community": "SNMP community",
+          "username": "SNMPv3 username",
+          "auth_protocol": "Authentication protocol",
+          "auth_key": "Authentication key",
+          "priv_protocol": "Privacy protocol",
+          "priv_key": "Privacy key",
           "scan_interval": "Polling interval (seconds)"
         }
       },
       "select": {
         "title": "Select sensors",
-        "description": "Select physical memory and fixed-disk sensors.",
-        "data": {"memory": "Physical memory"}
+        "description": "Select physical memory and disk metrics. Select at least one sensor.",
+        "data": {
+          "memory": "Physical memory",
+          "disk_metrics": "Disk metrics",
+          "free_percent": "Free Space (%)",
+          "free_mb": "Free MB",
+          "disks_separate_device": "Create a separate device for disk metrics"
+        }
       }
     },
     "error": {
-      "cannot_connect": "Could not connect to the SNMP agent.",
-      "invalid_response": "The SNMP agent returned an invalid response.",
+      "cannot_connect": "Could not connect to the SNMP agent. Check host, port, version and credentials.",
+      "storage_permission": "The SNMP agent responds to sysName, but access to hrStorageDescr is denied. Grant read access to the HOST-RESOURCES-MIB storage table.",
+      "snmp_probe_failed": "SNMP test failed: neither sysName nor hrStorageDescr returned readable data. Check connectivity, SNMP version, credentials and read permissions.",
       "unknown": "Unexpected error while querying SNMP.",
       "no_sensors": "Select at least one sensor."
     },
@@ -31,7 +50,11 @@
     "step": {
       "init": {
         "title": "SNMP Storage Monitor options",
-        "data": {"memory": "Physical memory"}
+        "data": {
+          "memory": "Physical memory",
+          "scan_interval": "Polling interval (seconds)",
+          "disks_separate_device": "Create a separate device for disk metrics"
+        }
       }
     },
     "abort": {

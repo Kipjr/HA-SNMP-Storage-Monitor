@@ -1,0 +1,67 @@
+name: PR Version Preview
+
+on:
+  pull_request:
+    branches: [dev]
+    types: [opened, synchronize, reopened, labeled, unlabeled]
+
+permissions:
+  contents: write
+
+jobs:
+  preview:
+    if: "${{ github.event.pull_request.head.repo.full_name == github.repository && !contains(github.event.pull_request.head.commit.message, 'chore: update prerelease version') }}"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.ref }}
+          fetch-depth: 0
+
+      - name: Create beta tag and update manifest
+        shell: bash
+        env:
+          PR_COMMITS: ${{ github.event.pull_request.commits }}
+          LABELS: ${{ join(github.event.pull_request.labels.*.name, ',') }}
+          PR_SHA: ${{ github.event.pull_request.head.sha }}
+          PR_BRANCH: ${{ github.event.pull_request.head.ref }}
+        run: |
+          set -euo pipefail
+          matches=0
+          label=""
+          for candidate in major minor patch; do
+            if [[ ",$LABELS," == *",version:$candidate,"* ]]; then label="$candidate"; matches=$((matches+1)); fi
+          done
+          if [[ "$matches" != "1" ]]; then echo "Set exactly one version label (version:major/minor/patch)."; exit 1; fi
+          git fetch --tags
+          latest="0.0.0"
+          while IFS= read -r tag; do
+            if [[ "$tag" =~ ^([0-9]+)\.([0-9]+)\.([0-9]+)$ ]]; then latest="$tag"; break; fi
+          done < <(git tag --list --sort=-v:refname)
+          IFS=. read -r major minor patch <<< "$latest"
+          case "$label" in
+            major) major=$((major+1)); minor=0; patch=0 ;;
+            minor) minor=$((minor+1)); patch=0 ;;
+            patch) patch=$((patch+1)) ;;
+          esac
+          version="$major.$minor.$patch-beta.$PR_COMMITS"
+          manifest="custom_components/snmp_storage_monitor/manifest.json"
+          python - "$manifest" "$version" <<'PY'
+          import json,sys
+          path,version=sys.argv[1:]
+          with open(path,encoding="utf-8") as f: data=json.load(f)
+          data["version"]=version
+          with open(path,"w",encoding="utf-8") as f: json.dump(data,f,indent=2); f.write("\n")
+          PY
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add "$manifest"
+          if ! git diff --cached --quiet; then
+            git commit -m "chore: update prerelease version to $version"
+            git push origin "HEAD:$PR_BRANCH"
+          fi
+          if ! git rev-parse "$version" >/dev/null 2>&1; then
+            git tag "$version" "$(git rev-parse HEAD)"
+            git push origin "$version"
+          fi
+          echo "Beta version: $version"
