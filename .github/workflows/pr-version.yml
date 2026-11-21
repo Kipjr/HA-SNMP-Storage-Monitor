@@ -61,7 +61,7 @@ jobs:
             git push origin "HEAD:$PR_BRANCH"
           fi
           if ! git rev-parse "$version" >/dev/null 2>&1; then
-            git tag "$version" "$PR_SHA"
+            git tag "$version" "$(git rev-parse HEAD)"
             git push origin "$version"
           fi
           echo "Beta version: $version"
