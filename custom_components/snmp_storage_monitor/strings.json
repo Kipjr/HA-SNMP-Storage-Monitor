@@ -4,7 +4,11 @@
       "user": {
         "title": "SNMP Storage Monitor",
         "description": "Set the SNMP host, port and protocol version.",
-        "data": {"host": "FQDN or IP address", "port": "SNMP UDP port", "version": "SNMP version"}
+        "data": {
+          "host": "FQDN or IP address",
+          "port": "SNMP UDP port",
+          "version": "SNMP version"
+        }
       },
       "credentials": {
         "title": "SNMP credentials",
@@ -21,8 +25,13 @@
       },
       "select": {
         "title": "Select sensors",
-        "description": "Select physical memory and fixed-disk sensors.",
-        "data": {"memory": "Physical memory"}
+        "description": "Select physical memory and disk metrics. Select at least one sensor.",
+        "data": {
+          "memory": "Physical memory",
+          "disk_metrics": "Disk metrics",
+          "free_percent": "Free Space (%)",
+          "free_mb": "Free MB"
+        }
       }
     },
     "error": {
@@ -32,10 +41,22 @@
       "unknown": "Unexpected error while querying SNMP.",
       "no_sensors": "Select at least one sensor."
     },
-    "abort": {"already_configured": "This SNMP agent is already configured."}
+    "abort": {
+      "already_configured": "This SNMP agent is already configured."
+    }
   },
   "options": {
-    "step": {"init": {"title": "SNMP Storage Monitor options", "data": {"memory": "Physical memory", "scan_interval": "Polling interval (seconds)"}}},
-    "abort": {"cannot_connect": "Could not query the SNMP agent."}
+    "step": {
+      "init": {
+        "title": "SNMP Storage Monitor options",
+        "data": {
+          "memory": "Physical memory",
+          "scan_interval": "Polling interval (seconds)"
+        }
+      }
+    },
+    "abort": {
+      "cannot_connect": "Could not query the SNMP agent."
+    }
   }
 }
