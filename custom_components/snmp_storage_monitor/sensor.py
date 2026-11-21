@@ -7,7 +7,7 @@ from homeassistant.components.sensor import SensorEntity
 from homeassistant.helpers.entity import DeviceInfo
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
-from .const import CONF_ENABLED_SENSORS, DISK_PREFIX, DOMAIN, MEMORY_KEY
+from .const import CONF_ENABLED_SENSORS, CONF_DISKS_SEPARATE_DEVICE, DISK_PREFIX, DOMAIN, MEMORY_KEY
 
 
 # Home Assistant supplies hass as part of the platform setup signature.
@@ -92,15 +92,29 @@ class DiskSensor(BaseStorageSensor):
     # pylint: disable=too-few-public-methods
 
     _attr_icon = "mdi:harddisk"
+    _attr_suggested_display_precision = 1
 
     def __init__(self, coordinator, entry, identity: str, metric: str) -> None:
         """Initialise a disk metric sensor."""
         super().__init__(coordinator, entry)
         self.identity = identity
         self.metric = metric
+        self.separate_device = entry.options.get(CONF_DISKS_SEPARATE_DEVICE, False)
         digest = hashlib.sha256(identity.encode()).hexdigest()
         self._attr_unique_id = f"{entry.entry_id}_disk_{digest}_{metric}"
         self._attr_native_unit_of_measurement = PERCENTAGE if metric == "free_percent" else "MB"
+
+    @property
+    def device_info(self) -> DeviceInfo:
+        """Return disk device metadata, optionally separated from the host."""
+        if not self.separate_device:
+            return super().device_info
+        return DeviceInfo(
+            identifiers={(DOMAIN, self.entry.entry_id, "disks")},
+            name=f"SNMP {self.entry.title} Disks",
+            manufacturer="SNMP",
+            model="Storage Monitor Disks",
+        )
 
     @property
     def name(self) -> str:
