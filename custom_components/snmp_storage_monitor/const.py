@@ -12,6 +12,7 @@ CONF_PRIV_PROTOCOL = "priv_protocol"
 CONF_PRIV_KEY = "priv_key"
 CONF_SCAN_INTERVAL = "scan_interval"
 CONF_ENABLED_SENSORS = "enabled_sensors"
+CONF_DISKS_SEPARATE_DEVICE = "disks_separate_device"
 
 DEFAULT_PORT = 161
 DEFAULT_SCAN_INTERVAL = 60
