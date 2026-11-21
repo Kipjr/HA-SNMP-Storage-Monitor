@@ -30,7 +30,8 @@
           "memory": "Physical memory",
           "disk_metrics": "Disk metrics",
           "free_percent": "Free Space (%)",
-          "free_mb": "Free MB"
+          "free_mb": "Free MB",
+          "disks_separate_device": "Create a separate device for disk metrics"
         }
       }
     },
@@ -51,7 +52,8 @@
         "title": "SNMP Storage Monitor options",
         "data": {
           "memory": "Physical memory",
-          "scan_interval": "Polling interval (seconds)"
+          "scan_interval": "Polling interval (seconds)",
+          "disks_separate_device": "Create a separate device for disk metrics"
         }
       }
     },
